@@ -9,9 +9,8 @@ alsfrs.w[, 1] <- NULL
 
 rel.err.diff <- 0
 
+#calculation of relative errors of Weibull and linear
 library(minpack.lm)
-
-
 for (i in 2:nrow(alsfrs.w)) {
   
   x <- alsfrs.w[1, ]
@@ -31,8 +30,8 @@ for (i in 2:nrow(alsfrs.w)) {
   
 }
 
+#labeling based on density plot of relative error difference
 library(dplyr)
-
 r.e.df <- data.frame(cbind(row.names(alsfrs.w), rel.err.diff))
 r.e.df <- r.e.df[-1, ]
 r.e.df[,2] <- rel.err.diff[-1]

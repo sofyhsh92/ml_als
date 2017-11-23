@@ -7,6 +7,8 @@ length(unique(lab$Test_Name))
 length(unique(lab$subject_id))
 #8342
 
+#tidying data so that each patient has is a row and each lab tests are columns
+#get minimum ALSFRS_delta for each patients to get lab tests of that point
 min.delta <- rep(0, length(unique(lab$subject_id)))
 
 for (i in unique(lab$subject_id)) {
@@ -43,8 +45,10 @@ not.dup.index <- !duplicated(lab.start[ , c(1,2)])
 sum(!not.dup.index)
 # 21151 rows are duplicated. 21151 / 276791 = 0.076 (7.6%)
 
+#get just 1 data for duplicated data
 lab.start2 <- lab.start[not.dup.index, ]
 
+#tidying data
 lab.start.tidy <- spread(lab.start2[, c("subject_id", "Test_Name", "Test_Result")], key = Test_Name, value = Test_Result)
 
 ##-------------------------------------------------------
@@ -53,7 +57,8 @@ alsfrs.w.label <- mutate(alsfrs.w, label = label)
 alsfrs.w.label <- select(alsfrs.w.label, label)
 
 w.label.row.name <- row.names(alsfrs.w)
-  
+
+#deleting "X" from each subject_id  
 for (i in 2:nrow(alsfrs.w)) {
   w.label.row.name[i] <- sub("^X", "", row.names(alsfrs.w)[i])
   
