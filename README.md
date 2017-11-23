@@ -59,6 +59,12 @@ calculate of relative errors of Weibull and linear
 label based on density plot of relative error difference
 
 
-script 9
+script 9 :
 data refinement for machine learning classification
 calculate min and max ALSFRS total for first 90 days
+
+script 10 :
+Ongoing data refinement
+
+script 11 :
+Ongoing machine learning classification
