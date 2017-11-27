@@ -22,7 +22,7 @@ for(i in 1:nrow(alsfrs)) {
 #drop everything except Q1~Q10 and ALSFRS_Delta
 alsfrs[ , 13:19] <- NULL
 
-#filter for 0~365 ALSFRS_Delta
+#filter for 0~90 ALSFRS_Delta
 library(dplyr)
 alsfrs <- filter(alsfrs, ALSFRS_Delta <= 90 & ALSFRS_Delta >= 0)
 alsfrs <- na.omit(alsfrs)
@@ -85,6 +85,9 @@ for (i in 1:length(alshistory$subject_id))
 alshistory$Onsetsite <- factor(alshistory$Onsetsite)
 #select onset site, Onset Delta, Diagnosis Delta
 alshistory <- subset(alshistory, subset=!is.na(Onsetsite),select=c(subject_id, Onsetsite,Onset_Delta,Diagnosis_Delta))
+alshistory <- alshistory %>%
+  mutate(onset_to_diagnosis = Diagnosis_Delta - Onset_Delta) %>%
+  select(subject_id, Onsetsite, Onset_Delta, onset_to_diagnosis)
 #done (alshistory : Onsetsite, Onset_Delta, Diagnosis_Delta \\ NA remains in Onset_Delta, Diagnosis Delta)
 write.csv(alshistory, "alshistory_ml.csv")
 
