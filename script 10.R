@@ -4,38 +4,38 @@ setwd("C:/Users/user/Documents/ml_als")
 
 ######creating data for machine learning
 ###ALSFRS
-alsfrs <- read.csv("alsfrs.csv")
+alsfrs_data_mm <- read.csv("alsfrs.csv")
 #merge Q5a and Q5b
-for(i in 1:nrow(alsfrs)) {
-  if(is.na(alsfrs$Q5a_Cutting_without_Gastrostomy[i])) {
-    alsfrs$Q5a_Cutting_without_Gastrostomy[i] <- alsfrs$Q5b_Cutting_with_Gastrostomy[i]
+for(i in 1:nrow(alsfrs_data_mm)) {
+  if(is.na(alsfrs_data_mm$Q5a_Cutting_without_Gastrostomy[i])) {
+    alsfrs_data_mm$Q5a_Cutting_without_Gastrostomy[i] <- alsfrs_data_mm$Q5b_Cutting_with_Gastrostomy[i]
   }
 }
 #drop Q5b
-alsfrs$Q5b_Cutting_with_Gastrostomy <- NULL
+alsfrs_data_mm$Q5b_Cutting_with_Gastrostomy <- NULL
 #merge Q10 and R1
-for(i in 1:nrow(alsfrs)) {
-  if(is.na(alsfrs$Q10_Respiratory[i])) {
-    alsfrs$Q10_Respiratory[i] <- alsfrs$R_1_Dyspnea[i]
+for(i in 1:nrow(alsfrs_data_mm)) {
+  if(is.na(alsfrs_data_mm$Q10_Respiratory[i])) {
+    alsfrs_data_mm$Q10_Respiratory[i] <- alsfrs_data_mm$R_1_Dyspnea[i]
   }
 }
 #drop everything except Q1~Q10 and ALSFRS_Delta
-alsfrs[ , 13:19] <- NULL
+alsfrs_data_mm[ , 13:19] <- NULL
 
 #filter for 0~90 ALSFRS_Delta
 library(dplyr)
-alsfrs <- filter(alsfrs, ALSFRS_Delta <= 90 & ALSFRS_Delta >= 0)
-alsfrs <- na.omit(alsfrs)
-length(unique(alsfrs$subject_id))
+alsfrs_data_mm <- filter(alsfrs_data_mm, ALSFRS_Delta <= 90 & ALSFRS_Delta >= 0)
+alsfrs_data_mm <- na.omit(alsfrs_data_mm)
+length(unique(alsfrs_data_mm$subject_id))
 #6506 patients
-colnames(alsfrs) <- c("subject_id", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "ALSFRS_Delta")
-alsfrs <- alsfrs %>%
+colnames(alsfrs_data_mm) <- c("subject_id", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "ALSFRS_Delta")
+alsfrs_data_mm <- alsfrs_data_mm %>%
   group_by(subject_id) %>%
   mutate(Q1_min = min(Q1), Q1_max = max(Q1), Q2_min = min(Q2), Q2_max = max(Q2), Q3_min = min(Q3), Q3_max = max(Q3), Q4_min = min(Q4), Q4_max = max(Q4), Q5_min = min(Q5), Q5_max = max(Q5), Q6_min = min(Q6), Q6_max = max(Q6), Q7_min = min(Q7), Q7_max = max(Q7), Q8_min = min(Q8), Q8_max = max(Q8), Q9_min = min(Q9), Q9_max = max(Q9), Q10_min = min(Q10), Q10_max = max(Q10)) %>%
   select(subject_id, Q1_min, Q1_max, Q2_min, Q2_max, Q3_min, Q3_max, Q4_min, Q4_max, Q5_min, Q5_max, Q6_min, Q6_max, Q7_min, Q7_max, Q8_min, Q8_max, Q9_min, Q9_max, Q10_min, Q10_max)
-alsfrs <- alsfrs[!duplicated(alsfrs), ]
+alsfrs_data_mm <- alsfrs_data_mm[!duplicated(alsfrs_data_mm), ]
 #done(alsfrs : Q1min ~ Q10min, Q1max ~ Q10max)
-write.csv(alsfrs, "alsfrs_ml.csv")
+write.csv(alsfrs_data_mm, "alsfrs_ml.csv")
 
 
 ###Riluzole
@@ -48,6 +48,7 @@ write.csv(riluzole, "riluzole_ml.csv")
 ###AlsHistory (Thanks to JKW)
 alshistory<-read.csv("AlsHistory_r.csv")
 
+# OnsetSite 변수 추가 과정.
 for (i in 1:length(alshistory$subject_id))
 {
   if (alshistory$Site_of_Onset[i]=="Onset: Bulbar"){
@@ -83,8 +84,20 @@ for (i in 1:length(alshistory$subject_id))
   
 }
 alshistory$Onsetsite <- factor(alshistory$Onsetsite)
-#select onset site, Onset Delta, Diagnosis Delta
-alshistory <- subset(alshistory, subset=!is.na(Onsetsite),select=c(subject_id, Onsetsite,Onset_Delta,Diagnosis_Delta))
+
+
+# DiagnosisDelta >0인 것들은 오류일테니 NA처리
+alshistory$Diagnosis_Delta[alshistory$Diagnosis_Delta>0]=NA
+
+# Make 'Mode' function
+Mode <- function(x){
+  x <- x[!is.na(x)]
+  uqx <- unique(x)
+  uqx[which.max(tabulate(match(x,uqx)))]
+}
+
+alshistory <- summarize(group_by(alshistory,subject_id),Onsetsite=Mode(Onsetsite),Onset_Delta=Mode(Onset_Delta),Diagnosis_Delta=Mode(Diagnosis_Delta))
+
 alshistory <- alshistory %>%
   mutate(onset_to_diagnosis = Diagnosis_Delta - Onset_Delta) %>%
   select(subject_id, Onsetsite, Onset_Delta, onset_to_diagnosis)
@@ -101,6 +114,7 @@ for (i in 1:nrow(demographics)) {
 }
 demographics <- select(demographics, subject_id, Age, Sex)
 demographics <- na.omit(demographics)
+demographics$Sex <- droplevels(demographics$Sex)
 #done (demographics : Age, Sex)
 write.csv(demographics, "demographics_ml.csv")
 

@@ -3,6 +3,7 @@
 alsfrs.ori <- read.csv("alsfrs.ori.csv")
 colnames(alsfrs.ori) <- alsfrs.ori[1, ]
 alsfrs <- cbind(subject_id = alsfrs.ori[, 1], alsfrs.ori[, 13:561])
+rm(alsfrs.ori)
 #deleting "X" from each subject_id  
 alsfrs$subject_id <- as.character(alsfrs$subject_id)
 for (i in 2:nrow(alsfrs)) {
@@ -141,32 +142,41 @@ for (i in 81:nrow(alsfrs.we)) {
 }
 
 ##modify alsfrs
-alsfrs <- read.csv("alsfrs.csv")
+alsfrs_data <- read.csv("alsfrs.csv")
 #merge Q5a and Q5b
-for(i in 1:nrow(alsfrs)) {
-  if(is.na(alsfrs$Q5a_Cutting_without_Gastrostomy[i])) {
-    alsfrs$Q5a_Cutting_without_Gastrostomy[i] <- alsfrs$Q5b_Cutting_with_Gastrostomy[i]
+for(i in 1:nrow(alsfrs_data)) {
+  if(is.na(alsfrs_data$Q5a_Cutting_without_Gastrostomy[i])) {
+    alsfrs_data$Q5a_Cutting_without_Gastrostomy[i] <- alsfrs_data$Q5b_Cutting_with_Gastrostomy[i]
   }
 }
 #drop Q5b
-alsfrs$Q5b_Cutting_with_Gastrostomy <- NULL
+alsfrs_data$Q5b_Cutting_with_Gastrostomy <- NULL
 #merge Q10 and R1
-for(i in 1:nrow(alsfrs)) {
-  if(is.na(alsfrs$Q10_Respiratory[i])) {
-    alsfrs$Q10_Respiratory[i] <- alsfrs$R_1_Dyspnea[i]
+for(i in 1:nrow(alsfrs_data)) {
+  if(is.na(alsfrs_data$Q10_Respiratory[i])) {
+    alsfrs_data$Q10_Respiratory[i] <- alsfrs_data$R_1_Dyspnea[i]
   }
 }
 #drop everything except Q1~Q10 and ALSFRS_Delta
-alsfrs[ , 13:19] <- NULL
+alsfrs_data[ , 13:19] <- NULL
 
 #filter for 0~90 ALSFRS_Delta
 library(dplyr)
-alsfrs <- filter(alsfrs, ALSFRS_Delta <= 90 & ALSFRS_Delta >= 0)
-alsfrs <- na.omit(alsfrs)
-length(unique(alsfrs$subject_id))
+alsfrs_data <- filter(alsfrs_data, ALSFRS_Delta <= 90 & ALSFRS_Delta >= 0)
+alsfrs_data <- na.omit(alsfrs_data)
+length(unique(alsfrs_data$subject_id))
 #6506 patients
-colnames(alsfrs) <- c("subject_id", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "ALSFRS_Delta")
-alsfrs <- alsfrs %>%
+colnames(alsfrs_data) <- c("subject_id", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "ALSFRS_Delta")
+
+alsfrs_last <- alsfrs_data %>%
+  group_by(subject_id) %>%
+  mutate(reverse_rank = rank(-ALSFRS_Delta)) %>%
+  filter(reverse_rank == 1) %>%
+  select(subject_id, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10)
+colnames(alsfrs_last) <- c("subject_id", "Q1_last", "Q2_last", "Q3_last", "Q4_last", "Q5_last", "Q6_last", "Q7_last", "Q8_last", "Q9_last", "Q10_last")
+
+
+alsfrs_data <- alsfrs_data %>%
   group_by(subject_id) %>%
   mutate(rank = rank(ALSFRS_Delta)) %>%
   filter(rank == 1) %>%
@@ -179,7 +189,10 @@ alsfrs <- alsfrs %>%
          breathing = (Q10 <= 1)) %>%
   mutate(mitos = movement + swallowing + communicating + breathing) %>%
   select(subject_id, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10, alsfrs_total, mitos, preslope)
-#done(alsfrs : Q1 ~ Q10, alsfrs_total)
+colnames(alsfrs_data) <- c("subject_id", "Q1_start", "Q2_start", "Q3_start", "Q4_start", "Q5_start", "Q6_start", "Q7_start", "Q8_start", "Q9_start", "Q10_start", "alsfrs_total", "mitos", "preslope")
+
+alsfrs_data <- left_join(alsfrs_data, alsfrs_last, by = "subject_id")
+#done(alsfrs_data : Q1 ~ Q10_start, Q1 ~ Q10_late, alsfrs_total)
 
 #-----------------------------------------------------------------------------------------------
 
