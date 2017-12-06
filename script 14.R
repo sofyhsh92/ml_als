@@ -92,35 +92,38 @@ alsfrs_data_mm <- alsfrs_data_mm %>%
 complete_data <- left_join(alsfrs_label, alsfrs_data_mm, by = "subject_id") %>%
   left_join(alshistory, by = "subject_id") %>%
   left_join(demographics, by = "subject_id") %>%
-  left_join(riluzole, by = "subject_id") %>%
+  left_join(p.riluzole, by = "subject_id") %>%
   left_join(vital_height, by = "subject_id") %>%
   left_join(vital_pressure, by = "subject_id") %>%
   left_join(vital_respiratory_rate, by = "subject_id") %>%
   left_join(vital_temperature, by = "subject_id") %>%
-  left_join(vital_weight, by = "subject_id")
+  left_join(vital_weight, by = "subject_id") %>%
+  left_join(p.fvc, by = "subject_id") %>%
+  left_join(p.lab, by = "subject_id")
+
+write.csv(complete_data, "data.csv")
 
 library(caret)
 
-complete_data_conti <- complete_data[, -c(26, 30, 31)]
+complete_data_conti <- complete_data[, -c(23, 27, 28)]
 
 complete_data_conti_imp <- predict(preProcess(complete_data_conti[, -1], method=c("medianImpute")), complete_data_conti[, -1])
 
-complete_data_imp <- left_join(mutate(complete_data_conti_imp, subject_id = complete_data_conti[, 1]), complete_data[, c(1, 26, 30, 31)], by = "subject_id")
+complete_data_imp <- left_join(mutate(complete_data_conti_imp, subject_id = complete_data_conti[, 1]), complete_data[, c(1, 23, 27, 28)], by = "subject_id")
 
 imputed_omitted_data <- na.omit(complete_data_imp)
 
 model <- train(
   label ~.,
-  data = imputed_omitted_data, 
+  data = imputed_omitted_data[, -65], 
   method = "rf",
-  tuneLength = 6,
+  tuneLength = 5,
   importance = TRUE,
   trControl = trainControl(method = "cv", number = 5, verboseIter = TRUE)
 )
 model
 plot(model)
-
-write.csv(complete_data, "data.csv")
+varImp(model)
 
 
 #_________________________________________________________________________
@@ -142,7 +145,7 @@ xgb_trcontrol_1 = trainControl(
 
 model2 <- train(
   label ~.,
-  data = imputed_omitted_data, 
+  data = imputed_omitted_data[, -65], 
   method = "xgbTree",
   importance = TRUE,
   trControl = xgb_trcontrol_1,

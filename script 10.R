@@ -38,13 +38,6 @@ alsfrs_data_mm <- alsfrs_data_mm[!duplicated(alsfrs_data_mm), ]
 write.csv(alsfrs_data_mm, "alsfrs_ml.csv")
 
 
-###Riluzole
-riluzole <- read.csv("Riluzole.csv")
-riluzole <- select(riluzole, subject_id, Subject_used_Riluzole)
-colnames(riluzole) <- c("subject_id", "riluzole")
-#done(riluzole : riluzole)
-write.csv(riluzole, "riluzole_ml.csv")
-
 ###AlsHistory (Thanks to JKW)
 alshistory<-read.csv("AlsHistory_r.csv")
 
