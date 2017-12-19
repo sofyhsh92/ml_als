@@ -1,16 +1,25 @@
 # ml_als
 
 trial 1 :
+
 trial for time series clustering of ALSFRS (dtw)
+
 data refinement -> get DTW distance matrix -> data refinement -> hierarchical clustering
 
 
+
 script #2 :
+
 convert ALSFRS_R to ALSFRS
+
 select patients with more or equal to 3 ALSFRS data
+
 dtw time series clustering with sample patients -> select 4 clusters via hierarchical clustering
+
 have a look at each clusters
+
 tried to fit Weibull to a cluster but glm function cannot be applied.
+
 
 
 script 3 :
@@ -53,7 +62,7 @@ try ML classification via randomeForest::randomForest
 failed due to missing data
 
 
-script 8 : 171122
+script 8 : 
 creating label (modification) 
 calculate of relative errors of Weibull and linear
 label based on density plot of relative error difference
@@ -67,4 +76,17 @@ script 10 :
 Ongoing data refinement
 
 script 11 :
-Ongoing machine learning classification
+First trial of machine learning classification by random forest
+
+script 12:
+Script for drawing graphs of label E, L, W patients and observing their difference
+
+script 13:
+start with new data (length : 18 months, ALSFRS_Delta 0 ~ 548 // data points >= 6 // last point alsfrs_delta >= 180)
+calculation of relative errors of Weibull and linear
+labeling based on density plot of relative error difference
+see the difference of plots of lable E, W
+trial of machine learning classification of E, W
+
+script 14:
+creating new label(
