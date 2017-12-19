@@ -126,7 +126,7 @@ alsfrs.x <- as.numeric(als_label[1, -1])
 alsfrs.we <- alsfrs.we[-1, ]
 alsfrs.we <- alsfrs.we[sample(nrow(alsfrs.we)), ]
 
-for (i in 81:nrow(alsfrs.we)) {
+for (i in 2:nrow(alsfrs.we)) {
   x <- alsfrs.x
   y <- alsfrs.we[i, ]
   

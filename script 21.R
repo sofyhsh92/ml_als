@@ -1,0 +1,280 @@
+###Script 21
+#1. calculating error of Linear, W-concave, W-convex
+#2. calcuating descriptive statistics of Linear, W-concave, W-convex
+
+setwd("C:/Users/user/Documents/ml_als")
+library(dplyr)
+library(tidyr)
+
+## new data (length : 18 months, ALSFRS_Delta 0 ~ 548 // data points >= 6 // last point alsfrs_delta >= 180)
+alsfrs.ori <- read.csv("alsfrs.ori.csv")
+colnames(alsfrs.ori) <- alsfrs.ori[1, ]
+alsfrs <- cbind(subject_id = alsfrs.ori[, 1], alsfrs.ori[, 13:561])
+rm(alsfrs.ori)
+#deleting "X" from each subject_id  
+alsfrs$subject_id <- as.character(alsfrs$subject_id)
+for (i in 2:nrow(alsfrs)) {
+  alsfrs$subject_id[i] <- sub("^X", "", alsfrs$subject_id[i])
+  
+}
+#data points >= 6
+c <- rep(TRUE, nrow(alsfrs))
+for(i in 2:nrow(alsfrs)) {
+  if(sum(!is.na(alsfrs[i, ])) <= 6) {
+    c[i] <- FALSE
+  }
+}
+alsfrs <- alsfrs[c, ]
+
+#last point alsfrs_delta >= 180
+c <- rep(TRUE, nrow(alsfrs))
+als180 <- cbind(subject_id = alsfrs[, 1], alsfrs[, 182:550])
+for(i in 2:nrow(alsfrs)) {
+  if(sum(!is.na(als180[i, ])) <= 1 ) {
+    c[i] <- FALSE
+  }
+}
+rm(als180)
+alsfrs <- alsfrs[c, ]
+rm(i)
+rm(c)
+
+rownames(alsfrs) <- alsfrs[, 1]
+alsfrs[, 1] <- NULL
+
+#error due to all same ALSFRS
+h <- rep(NA, nrow(alsfrs))
+h[1] <- 1
+for(i in 2:nrow(alsfrs)) {
+  if (!(sum(!duplicated(alsfrs[i, ][!is.na(alsfrs[i, ])])) == 1)) {
+    h[i] <- i
+  }
+}
+h <- h[!is.na(h)]
+
+alsfrs <- alsfrs[h, ]
+
+#calculation of relative errors of Weibull and linear
+#omit i = 330, 2121, 4032, 4140, 4480 (singular gradient)
+alsfrs <- alsfrs[-c(330, 2121, 4032, 4140, 4480), ]
+b <- 0
+rel.err.diff <- 0
+library(minpack.lm)
+for (i in 2:nrow(alsfrs)) {
+  
+  x <- alsfrs[1, ]
+  y <- alsfrs[i, ]
+  
+  x <- x[!is.na(y)]
+  y <- y[!is.na(y)]
+  x <- x+1
+  fit.w <- nlsLM(y ~ A*exp(1)^(-( ((c^2) * x) ^ b )), start = list(A = 40, c= 1, b = 0.1), control = nls.lm.control(maxiter = 125))
+  rmse.w <- sqrt( fit.w$m$deviance() / length(x) )
+  fit.l <- lm(y ~ x)
+  res.l <- summary(fit.l)$residuals
+  rmse.l <- sqrt(sum(res.l^2)/length(x))
+  rel.err.w <- rmse.w / sd(y)
+  rel.err.l <- rmse.l / sd(y)
+  rel.err.diff[i] <- rel.err.l - rel.err.w
+  b[i] <- as.numeric(fit.w$m$getPars()[3])
+  
+}
+
+b_and_rel.err <- data.frame(cbind(subject_id = as.numeric(rownames(alsfrs)[-1]), b = b[-1], rel.err.diff = rel.err.diff[-1]))
+quantile(rel.err.diff, 0.7)
+plot(density(b_and_rel.err[,3]), main = "relative error difference (linear - Weibull)")
+abline(v=0.06926119, col = "red")
+
+#labeling based on density plot of relative error difference
+label <- rep("E", nrow(alsfrs))
+label[1] <- NA
+
+for(i in 2:nrow(alsfrs)) {
+  if (rel.err.diff[i] > 0.06926119) {
+    label[i] <- "W"
+  }
+}
+
+table(label)
+
+b_and_rel.err$label <- NULL
+b_and_rel.err <- mutate(b_and_rel.err, label = label[-1])
+plot(density(filter(b_and_rel.err, label == "W")$b), xlim = c(-1, 15), main = "b")
+abline(v=1.55, col = "red")
+
+for(i in 1:nrow(b_and_rel.err)){
+  if(b_and_rel.err$label[i] == "W" & b_and_rel.err$b[i] > 1.55){
+    b_and_rel.err$label[i] <- "W_concave"
+  } else if (b_and_rel.err$label[i] == "W" & b_and_rel.err$b[i] <= 1.55){
+    b_and_rel.err$label[i] <- "W_convex"
+  }
+}
+
+table(b_and_rel.err$label)
+
+alsfrs_label <- b_and_rel.err[, c(1, 4)]
+
+rm(b_and_rel.err)
+rm(alsfrs)
+rm(fit.l)
+rm(fit.w)
+
+#-----------------------------------------------------------------------------------------
+
+###ALSFRS
+alsfrs <- read.csv("alsfrs.csv")
+#merge Q5a and Q5b
+for(i in 1:nrow(alsfrs)) {
+  if(is.na(alsfrs$Q5a_Cutting_without_Gastrostomy[i])) {
+    alsfrs$Q5a_Cutting_without_Gastrostomy[i] <- alsfrs$Q5b_Cutting_with_Gastrostomy[i]
+  }
+}
+#drop Q5b
+alsfrs$Q5b_Cutting_with_Gastrostomy <- NULL
+#merge Q10 and R1
+for(i in 1:nrow(alsfrs)) {
+  if(is.na(alsfrs$Q10_Respiratory[i])) {
+    alsfrs$Q10_Respiratory[i] <- alsfrs$R_1_Dyspnea[i]
+  }
+}
+#drop everything except Q1~Q10 and ALSFRS_Delta
+alsfrs[ , 13:19] <- NULL
+
+#filter for 0~90 ALSFRS_Delta
+alsfrs90 <- filter(alsfrs, ALSFRS_Delta <= 90 & ALSFRS_Delta >= 0)
+alsfrs90 <- na.omit(alsfrs90)
+colnames(alsfrs90) <- c("subject_id", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "ALSFRS_Delta")
+alsfrs90 <- alsfrs90 %>%
+  group_by(subject_id) %>%
+  mutate(range_alsfrs_delta = diff(range(ALSFRS_Delta))) %>%
+  mutate(alsfrs_total = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10)
+
+alsfrs_last <- alsfrs90 %>%
+  group_by(subject_id) %>%
+  mutate(reverse_rank = rank(-ALSFRS_Delta)) %>%
+  filter(reverse_rank == 1) %>%
+  select(subject_id, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10, alsfrs_total, ALSFRS_Delta)
+colnames(alsfrs_last) <- c("subject_id", "Q1_last", "Q2_last", "Q3_last", "Q4_last", "Q5_last", "Q6_last", "Q7_last", "Q8_last", "Q9_last", "Q10_last", "alsfrs_total_last", "ALSFRS_Delta")
+
+alsfrs_first <- alsfrs90 %>%
+  group_by(subject_id) %>%
+  mutate(rank = rank(ALSFRS_Delta)) %>%
+  filter(rank == 1) %>%
+  select(subject_id, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10, alsfrs_total)
+colnames(alsfrs_first) <- c("subject_id", "Q1_first", "Q2_first", "Q3_first", "Q4_first", "Q5_first", "Q6_first", "Q7_first", "Q8_first", "Q9_first", "Q10_first", "alsfrs_total_first")
+
+alsfrs90 <- alsfrs90 %>%
+  mutate(rank = rank(ALSFRS_Delta)) %>%
+  filter(rank == 1) %>%
+  left_join(alsfrs_last, by = "subject_id") %>%
+  left_join(alsfrs_first, by = "subject_id") %>%
+  mutate(alsfrs_slope = (alsfrs_total_last - alsfrs_total_first) / range_alsfrs_delta, 
+         Q1_slope = (Q1_last - Q1_first) / range_alsfrs_delta, 
+         Q2_slope = (Q2_last - Q2_first) / range_alsfrs_delta,
+         Q3_slope = (Q3_last - Q3_first) / range_alsfrs_delta,
+         Q4_slope = (Q4_last - Q4_first) / range_alsfrs_delta,
+         Q5_slope = (Q5_last - Q5_first) / range_alsfrs_delta,
+         Q6_slope = (Q6_last - Q6_first) / range_alsfrs_delta,
+         Q7_slope = (Q7_last - Q7_first) / range_alsfrs_delta,
+         Q8_slope = (Q8_last - Q8_first) / range_alsfrs_delta,
+         Q9_slope = (Q9_last - Q9_first) / range_alsfrs_delta,
+         Q10_slope = (Q10_last - Q10_first) / range_alsfrs_delta
+  ) %>%
+  select(subject_id, ALSFRS_Delta.x, alsfrs_total, alsfrs_slope)
+colnames(alsfrs90) <- c("subject_id", "ALSFRS_Delta_first", "alsfrs_total_first", "alsfrs_slope")
+
+rm(alsfrs_first)
+rm(alsfrs_last)
+
+#---------------------------------------------------------------------------------
+#filter for 0~365 ALSFRS_Delta
+alsfrs365 <- filter(alsfrs, ALSFRS_Delta >= 365)
+alsfrs365 <- na.omit(alsfrs365)
+colnames(alsfrs365) <- c("subject_id", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "ALSFRS_Delta")
+alsfrs365 <- alsfrs365 %>%
+  group_by(subject_id) %>%
+  mutate(range_alsfrs_delta = diff(range(ALSFRS_Delta))) %>%
+  mutate(alsfrs_total = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10) %>%
+  mutate(rank = rank(ALSFRS_Delta)) %>%
+  filter(rank == 1) %>%
+  select(subject_id, ALSFRS_Delta, alsfrs_total)
+colnames(alsfrs365) <- c("subject_id", "ALSFRS_Delta_last", "alsfrs_total_last")
+
+#------------------------------------------------------------------------------------
+
+alsfrs_label$label <- factor(alsfrs_label$label)
+
+alsfrs_error <- alsfrs_label %>%
+  left_join(alsfrs90, by = "subject_id") %>%
+  left_join(alsfrs365, by = "subject_id") %>%
+  mutate(error = alsfrs_total_last - (alsfrs_total_first + alsfrs_slope * (ALSFRS_Delta_last - ALSFRS_Delta_first)))
+alsfrs_error <- alsfrs_error[complete.cases(alsfrs_error), ]
+
+#box plot to see difference
+boxplot(filter(alsfrs_error, label == "E")$error, filter(alsfrs_error, label == "W_concave")$error, filter(alsfrs_error, label == "W_convex")$error, names = c("E", "W_concave", "W_convex"), main = "Error", outline = FALSE )
+
+#two sample (unpaired) t-test for mean of ALSFRS slopes (W_concave vs E / W_convex vs E)
+t.test(filter(alsfrs_error,label == "E")$error, filter(alsfrs_error, label == "W_concave")$error, paired = FALSE, var.equal = TRUE, conf.level = 0.95)
+
+t.test(filter(alsfrs_error,label == "E")$error, filter(alsfrs_error, label == "W_convex")$error, paired = FALSE, var.equal = TRUE, conf.level = 0.95)
+
+#summary of ALSFRS slopes by label
+alsfrs_error_mean_sd <- alsfrs_error %>%
+  group_by(label) %>%
+  summarise(mean = mean(error),
+            sd = sd(error))
+alsfrs_error_mean_sd
+
+##DONE
+rm(alsfrs)
+rm(alsfrs_label)
+rm(alsfrs90)
+rm(alsfrs365)
+write.csv(alsfrs_error, "alsfrs_error.csv")
+
+##Descriptive statistics
+complete_data <- read.csv("complete_data.csv")
+complete_data[, 1] <- NULL
+
+complete_data$Q1_max <- NULL
+complete_data$Q2_max <- NULL
+complete_data$Q3_max <- NULL
+complete_data$Q4_max <- NULL
+complete_data$Q5_max <- NULL
+complete_data$Q6_max <- NULL
+complete_data$Q7_max <- NULL
+complete_data$Q8_max <- NULL
+complete_data$Q9_max <- NULL
+complete_data$Q10_max <- NULL
+complete_data$Q1_diff <- NULL
+complete_data$Q2_diff <- NULL
+complete_data$Q3_diff <- NULL
+complete_data$Q4_diff <- NULL
+complete_data$Q5_diff <- NULL
+complete_data$Q6_diff <- NULL
+complete_data$Q7_diff <- NULL
+complete_data$Q8_diff <- NULL
+complete_data$Q9_diff <- NULL
+complete_data$Q10_diff <- NULL
+
+complete_data$mitos <- factor(complete_data$mitos)
+des_stat <- complete_data %>%
+  select(label, alsfrs_slope, alsfrs_total, mitos, Onsetsite, Onset_Delta, onset_to_diagnosis, age, gender, race, initial_weight)
+des_stat_conti <- des_stat %>%
+  group_by(label) %>%
+  summarise(mean_alsfrs_slope = mean(alsfrs_slope * 30, na.rm = TRUE), sd_alsfrs_slope = sd(alsfrs_slope * 30, na.rm = TRUE), mean_alsfrs_total = mean(alsfrs_total, na.rm = TRUE), sd_alsfrs_total = sd(alsfrs_total, na.rm = TRUE), mean_Onset_Delta = mean(Onset_Delta, na.rm = TRUE), sd_Onset_Delta = sd(Onset_Delta, na.rm = TRUE), mean_age = mean(age, na.rm = TRUE), sd_age = sd(age, na.rm = TRUE), weight = mean(initial_weight, na.rm = TRUE), sd_weight = sd(initial_weight, na.rm = TRUE))
+des_stat_conti
+
+E <- des_stat %>%
+  filter(label == "E") %>%
+  select(mitos, Onsetsite, gender, race)
+W_concave <- des_stat %>%
+  filter(label == "W_concave") %>%
+  select(mitos, Onsetsite, gender, race)
+W_convex <- des_stat %>%
+  filter(label == "W_convex") %>%
+  select(mitos, Onsetsite, gender, race)
+summary(E)
+summary(W_concave)
+summary(W_convex)
+

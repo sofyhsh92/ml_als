@@ -81,8 +81,8 @@ for (i in 2:nrow(alsfrs)) {
 
 b_and_rel.err <- data.frame(cbind(subject_id = as.numeric(rownames(alsfrs)[-1]), b = b[-1], rel.err.diff = rel.err.diff[-1]))
 quantile(rel.err.diff, 0.7)
-plot(density(b_and_rel.err[,3]), main = "relative error difference (linear - Weibull)")
-abline(v=0.06926119, col = "red")
+plot(density(b_and_rel.err[,3]), main = "relative error difference (linear - Weibull)", xlab = "")
+abline(v=0.06926119, col = "orange")
 
 #labeling based on density plot of relative error difference
 label <- rep("E", nrow(alsfrs))
@@ -98,8 +98,8 @@ table(label)
 
 b_and_rel.err$label <- NULL
 b_and_rel.err <- mutate(b_and_rel.err, label = label[-1])
-plot(density(filter(b_and_rel.err, label == "W")$b), xlim = c(-1, 15), main = "b")
-abline(v=1.55, col = "red")
+plot(density(filter(b_and_rel.err, label != "E")$b), xlim = c(-1, 15), main = "density plot of b", xlab="")
+abline(v=1.55, col = "orange")
 
 for(i in 1:nrow(b_and_rel.err)){
   if(b_and_rel.err$label[i] == "W" & b_and_rel.err$b[i] > 1.55){
@@ -266,7 +266,7 @@ rm(alsfrs)
 rm(alsfrs_first)
 rm(alsfrs_last)
 rm(i)
-#done(alsfrs : Q1_max ~ Q10_max, Q1_diff ~ Q10_diff, Q1_slope ~ Q10_slope, alsfrs_slope, preslope, mitos)
+#done(alsfrs : Q1_max ~ Q10_max, Q1_diff ~ Q10_diff, Q1_slope ~ Q10_slope, alsfrs_slope, alsfrs_total, preslope, mitos)
 
 ###demographics
 #PROACT data

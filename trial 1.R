@@ -1,4 +1,4 @@
-#instal dtw package for dtw time series clustering
+#install dtw package for dtw time series clustering
 install.packages("dtw")
 library(dtw)
 ls()
