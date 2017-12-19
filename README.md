@@ -19,14 +19,14 @@ have a look at each clusters
 
 tried to fit Weibull to a cluster but glm function cannot be applied.
 
-
+-------------------------------------------------------------------------------------------------------------
 
 script 3 :
 classification with slopes
 get each patients' slope and take a look
 -> cut data to just 0~365 ALSFRS_Delta
 then see slopes again
-
+-------------------------------------------------------------------------------------------------------------
 
 script 4 :
 least square estimation of Weibull model (2 parameter) via nls function
