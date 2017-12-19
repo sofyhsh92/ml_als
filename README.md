@@ -6,8 +6,7 @@ trial for time series clustering of ALSFRS (dtw)
 
 data refinement -> get DTW distance matrix -> data refinement -> hierarchical clustering
 
-
-
+-------------------------------------------------------------------------------------------------------------
 script #2 :
 
 convert ALSFRS_R to ALSFRS
